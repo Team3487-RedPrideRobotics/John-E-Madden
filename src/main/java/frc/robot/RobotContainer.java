@@ -4,8 +4,6 @@
 
 package frc.robot;
 
-import edu.wpi.first.wpilibj.GenericHID;
-import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.WaitCommand;
 import frc.robot.subsystems.Display;
@@ -18,40 +16,21 @@ import frc.robot.subsystems.Display;
  */
 public class RobotContainer {
 
-  private static RobotContainer m_robotContainer = new RobotContainer();  
-  // The robot's subsystems and commands are defined here...
-  //private final Drive m_drive = new Drive();
-  //private final Outtake m_outtake = new Outtake();
-  //private final Intake m_intake = new Intake();
-  private final Display m_display = new Display();
-  //private final TeleopCommand m_teleopCommand = new TeleopCommand(m_drive, m_outtake, m_intake);
+    private static RobotContainer m_robotContainer = new RobotContainer();  
+    @SuppressWarnings("unused")
+    private final Display m_display = new Display();
 
-  /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
-    // Configure the button bindings
     configureButtonBindings();
   }
 
   public static RobotContainer getInstance() {
     return m_robotContainer;
   }
-
-  /**
-   * Use this method to define your button->command mappings. Buttons can be created by
-   * instantiating a {@link GenericHID} or one of its subclasses ({@link
-   * edu.wpi.first.wpilibj.Joystick} or {@link XboxController}), and then passing it to a {@link
-   * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
-   */
   private void configureButtonBindings() {}
 
-  /**
-   * Use this to pass the autonomous command to the main {@link Robot} class.
-   *
-   * @return the command to run in autonomous
-   */
   public Command getAutonomousCommand() {
-    // An ExampleCommand will run in autonomous
-    return null;
+    return new WaitCommand(1);
   }
 
   public Command getTeleopCommand(){
