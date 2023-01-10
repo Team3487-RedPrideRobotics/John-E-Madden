@@ -4,21 +4,17 @@
 
 package frc.robot.subsystems;
 
-import java.util.Map;
-
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.SparkMaxPIDController;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.networktables.EntryListenerFlags;
-import edu.wpi.first.networktables.NetworkTableEntry;
-import edu.wpi.first.wpilibj.Encoder;
+import edu.wpi.first.networktables.DoublePublisher;
+import edu.wpi.first.networktables.DoubleSubscriber;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
-import edu.wpi.first.wpilibj.motorcontrol.Spark;
-import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
-import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -34,6 +30,8 @@ public class Outtake extends SubsystemBase {
   private double kP_aimer = 1;
   private double aimTheshold = 2*Math.PI/180;
   private double spin_ratio = 1; //ratio between bottom and top linear speed
+  private double outtake_speed = Constants.OuttakeEdits.SHOOT_SPEED;
+  private double outtake_angle = Constants.OuttakeEdits.SHOOT_ANGLE;
   private double top_radius = 2d/2d*2.54/100; // radius of top flywheel in meters
   private double bottom_radius = 4d/2d*2.54/100; // radius of bottom flywheel in meters
   private RelativeEncoder top_encoder;
@@ -42,7 +40,13 @@ public class Outtake extends SubsystemBase {
   private SparkMaxPIDController PIDController_bottom;
   private SimpleMotorFeedforward feedforward_top;
   private SimpleMotorFeedforward feedforward_bottom;
-  private NetworkTableEntry ratioEntry;
+  private NetworkTable outtakeTable;
+  private DoubleSubscriber ratioSub;
+  private DoubleSubscriber angleSub;
+  private DoubleSubscriber shootSub;
+  final DoublePublisher ratioPub;
+  final DoublePublisher anglePub;
+  final DoublePublisher shootPub;
 
   /** Creates a new ExampleSubsystem. */
   public Outtake() {
@@ -90,10 +94,19 @@ public class Outtake extends SubsystemBase {
     PIDController_bottom.setFF(OuttakePID.kFF_shooter);
     PIDController_bottom.setOutputRange(OuttakePID.kMinOutput_shooter, OuttakePID.kMaxOutput_shooter);    
 
-    ratioEntry = Shuffleboard.getTab("Teleop").add("Spin Ratio", spin_ratio).getEntry();
-    ratioEntry.addListener(event -> {
-      spin_ratio = ratioEntry.getDouble(spin_ratio);
-   }, EntryListenerFlags.kNew | EntryListenerFlags.kUpdate);
+    outtakeTable = NetworkTableInstance.getDefault().getTable("Outtake");
+    
+    ratioPub = outtakeTable.getDoubleTopic("Spin Ratio").publish();
+    anglePub = outtakeTable.getDoubleTopic("Outtake Angle").publish();
+    shootPub = outtakeTable.getDoubleTopic("Outtake Speed").publish();
+
+    ratioPub.setDefault(spin_ratio);
+    shootPub.setDefault(outtake_speed);
+    anglePub.setDefault(outtake_angle);
+
+    ratioSub = outtakeTable.getDoubleTopic("Spin Ratio").subscribe(spin_ratio);
+    angleSub = outtakeTable.getDoubleTopic("Outtake Angle").subscribe(Constants.OuttakeEdits.SHOOT_ANGLE);
+    shootSub = outtakeTable.getDoubleTopic("Outtake Speed").subscribe(Constants.OuttakeEdits.SHOOT_SPEED);
   }
 
   @Override
@@ -102,6 +115,16 @@ public class Outtake extends SubsystemBase {
     SmartDashboard.putNumber("Top Velocity", top_encoder.getVelocity());
     SmartDashboard.putNumber("Aim Position", aim_encoder.getPosition());
     SmartDashboard.putNumber("Bottom Velocity", bottom_encoder.getVelocity());
+
+    for (double iterVal : ratioSub.readQueueValues()) {
+      this.spin_ratio = iterVal;
+    }
+    for (double iterVal : angleSub.readQueueValues()) {
+      this.outtake_angle = iterVal;
+    }
+    for (double iterVal : shootSub.readQueueValues()) {
+      this.outtake_speed = iterVal;
+    }
   }
 
   @Override
@@ -172,6 +195,13 @@ public class Outtake extends SubsystemBase {
 
   public void setAimingVoltage(double voltage){
     aimer.setVoltage(voltage);
+  }
+
+  public void autofire(){
+    if(go_to_angle(outtake_angle)){
+      setAimingVoltage(0);
+      shootAtSpeed(outtake_speed);
+    }
   }
   // methods
 }
